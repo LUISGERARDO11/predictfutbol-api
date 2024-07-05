@@ -11,6 +11,9 @@
         "src": "/(.*)",
         "dest": "backend/wsgi.py"
       }
-    ]
+    ],
+    "env": {
+      "PYTHON_VERSION": "3.12"
+    }
   }
   
