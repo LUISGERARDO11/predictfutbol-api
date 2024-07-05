@@ -1,4 +1,11 @@
 {
+    "version": 2,
+    "builds": [
+      {
+        "src": "backend/wsgi.py",
+        "use": "@vercel/python"
+      }
+    ],
     "routes": [
       {
         "src": "/(.*)",
@@ -6,3 +13,4 @@
       }
     ]
   }
+  
