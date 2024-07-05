@@ -115,3 +115,7 @@ def make_prediction_without_teamdata(request: HttpRequest):
         return JsonResponse(result)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+def welcome_view(request):
+    return JsonResponse({'message': 'Hola mundo'})

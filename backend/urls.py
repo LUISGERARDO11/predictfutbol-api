@@ -16,8 +16,10 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from analysis_app.views import welcome_view  # Importa la nueva vista
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('analysis_app.urls')),
+    path('', welcome_view),  # Añade la ruta para la raíz aquí
 ]
