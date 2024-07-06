@@ -12,15 +12,6 @@ headers = {
 }
 
 def get_external_data(competition_id='PL'):
-    """
-    Obtiene detalles específicos del próximo partido programado para una competencia específica.
-
-    Args:
-        competition_id (str): ID de la competencia (por defecto 'PL' para Premier League).
-
-    Returns:
-        dict or None: Detalles específicos del próximo partido o None si no se encuentra.
-    """
     try:
         # Filtrar partidos por la fecha actual y futura
         response = requests.get(f'{base_url}/competitions/{competition_id}/matches?status=SCHEDULED', headers=headers)
@@ -88,18 +79,7 @@ def get_team_by_shortname(short_name, competition_id='PL'):
 
         # Buscar el equipo por nombre corto
         for team in data['teams']:
-            # Manejo especial para equipos como "Leicester" y "Wolves"
-            if short_name == 'Leicester' and 'Leicester City' in team['name']:
-                team_info = {
-                    'crestUrl': team['crest']
-                }
-                return team_info
-            elif short_name == 'Wolves' and 'Wolverhampton' in team['name']:
-                team_info = {
-                    'crestUrl': team['crest']
-                }
-                return team_info
-            elif team['shortName'] == short_name:
+            if team['shortName'] == short_name:
                 team_info = {
                     'crestUrl': team['crest']
                 }
@@ -111,16 +91,38 @@ def get_team_by_shortname(short_name, competition_id='PL'):
         print(f'Error al buscar el equipo por nombre corto: {e}')
         return None
 
+
+
+def get_teams_next_season(competition_id='PL', season='2024'):
+    try:
+        response = requests.get(f'{base_url}/competitions/{competition_id}/teams?season={season}', headers=headers)
+        response.raise_for_status()
+
+        teams_data = response.json()
+
+        teams = []
+        if 'teams' in teams_data:
+            for team in teams_data['teams']:
+                teams.append(team['shortName'])
+        else:
+            raise Exception('No se encontraron equipos en la respuesta.')
+
+        teams.sort()
+
+        return teams
+
+    except requests.RequestException as e:
+        print(f'Error al obtener los equipos de la próxima temporada: {e}')
+        return None
+    except Exception as e:
+        print(f'Error: {e}')
+        return None
+    
 @api_view(['GET'])
 def make_prediction(request):
     try:
         prediction = make_prediction_logic()
         additional_data = get_external_data()
-        
-        # Obtener logos de los equipos
-        home_team_logo = get_team_by_shortname(additional_data['homeTeam']['shortName'])
-        away_team_logo = get_team_by_shortname(additional_data['awayTeam']['shortName'])
-        
         # Construir el JSON de respuesta
         result = {
             'prediction': prediction,
@@ -156,7 +158,15 @@ def make_prediction_without_teamdata(request: HttpRequest):
         return JsonResponse(result)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
+    
+@api_view(['GET'])
+def get_teams_season(request):
+    teams = get_teams_next_season()
+    if teams:
+        return JsonResponse({'teams': teams})
+    else:
+        return JsonResponse({'error': 'No se pudieron obtener los equipos de la próxima temporada.'}, status=500)
+    
 @api_view(['GET'])
 def welcome_view(request):
     return JsonResponse({'message': 'Hola mundo'})

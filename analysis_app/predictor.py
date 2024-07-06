@@ -22,7 +22,21 @@ def custom_objects():
 
 model = tf.keras.models.load_model(MODEL_PATH, custom_objects=custom_objects())
 
+# Función para ajustar los nombres de los equipos
+def adjust_team_names(team_name):
+    adjustments = {
+        'Leicester City': 'Leicester',
+        'Wolverhampton': 'Wolves',
+        'Brighton Hove': 'Brighton',
+        'Nottingham': 'Nott\'m Forest'
+    }
+    return adjustments.get(team_name, team_name)
+
 def preprocess_input(data):
+    # Ajustar los nombres de los equipos
+    data['HomeTeam'] = adjust_team_names(data['HomeTeam'])
+    data['AwayTeam'] = adjust_team_names(data['AwayTeam'])
+    
     # Crear un DataFrame con las características necesarias
     new_match_data = {feature: 0 for feature in best_selected_features}
     new_match_data['HomeTeam'] = data['HomeTeam']
