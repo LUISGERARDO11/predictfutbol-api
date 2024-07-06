@@ -5,7 +5,7 @@ from .predictor import predict
 from .utils import TEAMS_DATA
 import requests
 
-API_TOKEN = 'e4126365396e46f38ce24d39ed898c98'
+API_TOKEN = 'cc61b4c3b231421781f1a030f9a1d213'
 base_url = 'https://api.football-data.org/v4'
 headers = {
     'X-Auth-Token': API_TOKEN
@@ -78,6 +78,27 @@ def make_prediction_logic_without_teamdata(home_team_name, away_team_name):
     prediction = predict(input_data)  # Asume que predict está implementada correctamente
     return prediction
 
+def get_team_by_shortname(short_name, competition_id='PL'):
+    try:
+        # Realizar la solicitud GET a la API
+        response = requests.get(f'{base_url}/competitions/{competition_id}/teams', headers={'X-Auth-Token': API_TOKEN})
+        response.raise_for_status()  # Lanza una excepción si hay un error HTTP
+
+        data = response.json()
+
+        # Buscar el equipo por nombre corto
+        for team in data['teams']:
+            if team['shortName'] == short_name:
+                team_info = {
+                    'crestUrl': team['crest']
+                }
+                return team_info
+        
+        return None  # Retorna None si no se encuentra el equipo con el nombre corto dado
+    
+    except requests.RequestException as e:
+        print(f'Error al buscar el equipo por nombre corto: {e}')
+        return None
 
 @api_view(['GET'])
 def make_prediction(request):
@@ -85,10 +106,14 @@ def make_prediction(request):
         prediction = make_prediction_logic()
         additional_data = get_external_data()
         
+        # Obtener logos de los equipos
+        home_team_logo = get_team_by_shortname(additional_data['homeTeam']['shortName'])
+        away_team_logo = get_team_by_shortname(additional_data['awayTeam']['shortName'])
+        
         # Construir el JSON de respuesta
         result = {
             'prediction': prediction,
-            'additional_data': additional_data
+            'additional_data': additional_data,
         }
         
         return JsonResponse(result)
@@ -103,12 +128,18 @@ def make_prediction_without_teamdata(request: HttpRequest):
         home_team_name = request.data.get('homeTeam')
         away_team_name = request.data.get('awayTeam')
         
+        # Obtener logos de los equipos
+        home_team_logo = get_team_by_shortname(home_team_name)
+        away_team_logo = get_team_by_shortname(away_team_name)
+        
         # Hacer la predicción basada en los nombres de los equipos
         prediction = make_prediction_logic_without_teamdata(home_team_name, away_team_name)
         
         # Construir el JSON de respuesta
         result = {
-            'prediction': prediction
+            'prediction': prediction,
+            'homeTeamLogo': home_team_logo,
+            'awayTeamLogo': away_team_logo
         }
         
         return JsonResponse(result)
