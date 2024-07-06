@@ -34,6 +34,10 @@ def adjust_team_names(team_name):
 
 def preprocess_input(data):
     try:
+        # Ajustar los nombres de los equipos
+        data['HomeTeam'] = adjust_team_names(data['HomeTeam'])
+        data['AwayTeam'] = adjust_team_names(data['AwayTeam'])
+
         # Crear un DataFrame con las características necesarias
         new_match_data = {feature: 0 for feature in best_selected_features}
         new_match_data['HomeTeam'] = data['HomeTeam']
