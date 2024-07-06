@@ -1,15 +1,20 @@
+# analysis_app/views.py
+
 from django.shortcuts import render
 from django.http import JsonResponse, HttpRequest
 from rest_framework.decorators import api_view
 from .predictor import predict
-from .utils import TEAMS_DATA
+from django.core.cache import cache
 import requests
+import logging
 
-API_TOKEN = 'e4126365396e46f38ce24d39ed898c98'
+API_TOKEN = 'cc61b4c3b231421781f1a030f9a1d213'
 base_url = 'https://api.football-data.org/v4'
 headers = {
     'X-Auth-Token': API_TOKEN
 }
+
+logger = logging.getLogger(__name__)
 
 def get_external_data(competition_id='PL'):
     """
@@ -34,7 +39,7 @@ def get_external_data(competition_id='PL'):
             match_details = {
                 'matchday': next_match.get('matchday'),
                 'stage': next_match.get('stage'),
-                'group': next_match['group'],
+                'group': next_match.get('group'),
                 'utcDate': next_match['utcDate'],
                 'homeTeam': {
                     'name': next_match['homeTeam']['name'],
@@ -50,18 +55,20 @@ def get_external_data(competition_id='PL'):
             
             return match_details
         else:
+            logger.warning('No se encontraron partidos programados.')
             return None
     except requests.RequestException as e:
-        print(f'Error al obtener los detalles del próximo partido: {e}')
+        logger.error(f'Error al obtener los detalles del próximo partido: {e}')
         return None
 
 
 def make_prediction_logic():
-    if not TEAMS_DATA:
+    teams_data = cache.get('TEAMS_DATA')
+    if not teams_data:
         raise Exception('No se encontraron datos de equipos.')
     
-    home_team = TEAMS_DATA['homeTeam']
-    away_team = TEAMS_DATA['awayTeam']
+    home_team = teams_data['homeTeam']
+    away_team = teams_data['awayTeam']
     
     # Prepara los datos de entrada para la predicción
     input_data = {'HomeTeam': home_team, 'AwayTeam': away_team}
@@ -69,15 +76,6 @@ def make_prediction_logic():
     # Hacer la predicción
     prediction = predict(input_data)
     return prediction
-
-def make_prediction_logic_without_teamdata(home_team_name, away_team_name):
-    # Prepara los datos de entrada para la predicción
-    input_data = {'HomeTeam': home_team_name, 'AwayTeam': away_team_name}
-    
-    # Hacer la predicción
-    prediction = predict(input_data)  # Asume que predict está implementada correctamente
-    return prediction
-
 
 @api_view(['GET'])
 def make_prediction(request):
@@ -93,8 +91,16 @@ def make_prediction(request):
         
         return JsonResponse(result)
     except Exception as e:
+        logger.error(f'Error en la predicción: {e}')
         return JsonResponse({'error': str(e)}, status=500)
+
+def make_prediction_logic_without_teamdata(home_team_name, away_team_name):
+    # Prepara los datos de entrada para la predicción
+    input_data = {'HomeTeam': home_team_name, 'AwayTeam': away_team_name}
     
+    # Hacer la predicción
+    prediction = predict(input_data)  # Asume que predict está implementada correctamente
+    return prediction
 
 @api_view(['POST'])
 def make_prediction_without_teamdata(request: HttpRequest):
@@ -113,6 +119,7 @@ def make_prediction_without_teamdata(request: HttpRequest):
         
         return JsonResponse(result)
     except Exception as e:
+        logger.error(f'Error en la predicción sin datos del equipo: {e}')
         return JsonResponse({'error': str(e)}, status=500)
 
 @api_view(['GET'])

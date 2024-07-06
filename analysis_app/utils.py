@@ -1,6 +1,9 @@
+# analysis_app/utils.py
+
+from django.core.cache import cache
 import requests
-import json
 import logging
+import time
 
 API_TOKEN = 'e4126365396e46f38ce24d39ed898c98'
 base_url = 'https://api.football-data.org/v4'
@@ -10,18 +13,17 @@ headers = {
 
 logger = logging.getLogger(__name__)
 
-TEAMS_DATA = {}
-
-
 def fetch_teams_data(competition_id='PL'):
-    global TEAMS_DATA
-    logger.info('Ejecutando fetch_teams_data...')  # Mensaje de depuración al inicio de la función
+    logger.info('Ejecutando fetch_teams_data...')
     next_match = get_next_match(competition_id)
+    if next_match is None:
+        logger.error('No se pudo obtener el siguiente partido.')
+        return
     teams = get_teams_from_next_match(next_match)
-    TEAMS_DATA = teams
-    logger.info('Datos de equipos obtenidos: %s', TEAMS_DATA)  # Mensaje de depuración después de obtener los datos
+    cache.set('TEAMS_DATA', teams, timeout=None)
+    logger.info('Datos de equipos obtenidos: %s', teams)
 
-def get_next_match(competition_id='PL'):
+def get_next_match(competition_id='PL', retry_count=0):
     try:
         response = requests.get(f'{base_url}/competitions/{competition_id}/matches?status=SCHEDULED', headers=headers)
         response.raise_for_status()
@@ -31,9 +33,16 @@ def get_next_match(competition_id='PL'):
             return next_match
         else:
             return None
-    except requests.RequestException as e:
-        logger.error(f'Error al obtener los partidos: {e}')
-        return None
+    except requests.HTTPError as e:
+        if e.response.status_code == 429:
+            retry_count += 1
+            delay = min(60 * (2 ** retry_count), 3600)
+            logger.error(f'Rate limit exceeded. Retrying after {delay} seconds...')
+            time.sleep(delay)
+            return get_next_match(competition_id, retry_count)
+        else:
+            logger.error(f'Error al obtener los partidos: {e}')
+            return None
 
 def get_teams_from_next_match(match):
     if match:
