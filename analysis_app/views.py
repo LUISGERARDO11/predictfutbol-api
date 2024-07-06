@@ -88,7 +88,18 @@ def get_team_by_shortname(short_name, competition_id='PL'):
 
         # Buscar el equipo por nombre corto
         for team in data['teams']:
-            if team['shortName'] == short_name:
+            # Manejo especial para equipos como "Leicester" y "Wolves"
+            if short_name == 'Leicester' and 'Leicester City' in team['name']:
+                team_info = {
+                    'crestUrl': team['crest']
+                }
+                return team_info
+            elif short_name == 'Wolves' and 'Wolverhampton' in team['name']:
+                team_info = {
+                    'crestUrl': team['crest']
+                }
+                return team_info
+            elif team['shortName'] == short_name:
                 team_info = {
                     'crestUrl': team['crest']
                 }
