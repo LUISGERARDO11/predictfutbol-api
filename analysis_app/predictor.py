@@ -33,29 +33,31 @@ def adjust_team_names(team_name):
     return adjustments.get(team_name, team_name)
 
 def preprocess_input(data):
-    # Ajustar los nombres de los equipos
-    data['HomeTeam'] = adjust_team_names(data['HomeTeam'])
-    data['AwayTeam'] = adjust_team_names(data['AwayTeam'])
-    
-    # Crear un DataFrame con las características necesarias
-    new_match_data = {feature: 0 for feature in best_selected_features}
-    new_match_data['HomeTeam'] = data['HomeTeam']
-    new_match_data['AwayTeam'] = data['AwayTeam']
-    new_match_df = pd.DataFrame([new_match_data])
-    
-    # Aplicar el preprocesador
-    new_match_df[['HomeTeam', 'AwayTeam']] = ordinal_encoder.transform(new_match_df[['HomeTeam', 'AwayTeam']])
-    new_match_df[best_selected_features] = scaler.transform(new_match_df[best_selected_features])
-    new_match_pca = best_pca.transform(new_match_df[best_selected_features])
-    
-    return new_match_pca.reshape((1, new_match_pca.shape[1], 1))
+    try:
+        # Crear un DataFrame con las características necesarias
+        new_match_data = {feature: 0 for feature in best_selected_features}
+        new_match_data['HomeTeam'] = data['HomeTeam']
+        new_match_data['AwayTeam'] = data['AwayTeam']
+        new_match_df = pd.DataFrame([new_match_data])
+        
+        # Aplicar el preprocesador
+        new_match_df[['HomeTeam', 'AwayTeam']] = ordinal_encoder.transform(new_match_df[['HomeTeam', 'AwayTeam']])
+        new_match_df[best_selected_features] = scaler.transform(new_match_df[best_selected_features])
+        new_match_pca = best_pca.transform(new_match_df[best_selected_features])
+        
+        return new_match_pca.reshape((1, new_match_pca.shape[1], 1))
+    except ValueError as e:
+        unknown_categories = str(e).split("['")[1].split("']")[0]
+        raise ValueError(f"Equipo(s) desconocido(s): {unknown_categories}. Por favor, usa equipos conocidos.")
+    except Exception as e:
+        raise e
 
 def predict(data):
-    # Preprocesar los datos de entrada
     try:
+        # Preprocesar los datos de entrada
         processed_data = preprocess_input(data)
-    except IndexError as e:
-        return {'error': 'list index out of range. Please provide correct data format: {"HomeTeam": "TeamA", "AwayTeam": "TeamB"}.'}
+    except ValueError as e:
+        return {'error': str(e)}
     except Exception as e:
         return {'error': str(e)}
 
