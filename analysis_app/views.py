@@ -106,7 +106,6 @@ def make_prediction_without_teamdata(request: HttpRequest):
         # Hacer la predicción basada en los nombres de los equipos
         prediction = make_prediction_logic_without_teamdata(home_team_name, away_team_name)
         
-     
         # Construir el JSON de respuesta
         result = {
             'prediction': prediction
