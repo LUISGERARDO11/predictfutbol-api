@@ -8,4 +8,4 @@ class AnalysisAppConfig(AppConfig):
     def ready(self):
         from .periodic_tasks import start_periodic_task
         # Intervalo en segundos (por ejemplo, cada hora)
-        start_periodic_task(300)
+        start_periodic_task(3600)

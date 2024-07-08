@@ -5,6 +5,7 @@ from .predictor import predict, retrain_model_logic
 from .utils import TEAMS_DATA
 import requests
 import pandas as pd
+from datetime import datetime
 
 API_TOKEN = 'cc61b4c3b231421781f1a030f9a1d213'
 base_url = 'https://api.football-data.org/v4'
@@ -115,6 +116,51 @@ def get_teams_next_season(competition_id='PL', season='2024'):
     except Exception as e:
         print(f'Error: {e}')
         return None
+
+def get_scheduled_matches(competition_id='PL', season='2024'):
+    try:
+        # Realizar la solicitud GET a la API para obtener los partidos de la temporada especificada
+        response = requests.get(f'{base_url}/competitions/{competition_id}/matches?season={season}', headers=headers)
+        response.raise_for_status()  # Lanza una excepción si hay un error HTTP
+
+        matches_data = response.json()
+
+        # Crear un diccionario para organizar los partidos por jornada
+        matches_by_matchday = {}
+        
+        if 'matches' in matches_data:
+            for match in matches_data['matches']:
+                match_info = {
+                    'utcDate': match['utcDate'],
+                    'homeTeam': match['homeTeam']['shortName'],
+                    'awayTeam': match['awayTeam']['shortName'],
+                    'status': match['status']
+                }
+                
+                matchday = match['matchday']
+                if matchday not in matches_by_matchday:
+                    matches_by_matchday[matchday] = []
+                
+                matches_by_matchday[matchday].append(match_info)
+        else:
+            raise Exception('No se encontraron partidos en la respuesta.')
+
+        # Ordenar los partidos dentro de cada jornada por fecha
+        for matchday in matches_by_matchday:
+            matches_by_matchday[matchday].sort(key=lambda x: datetime.strptime(x['utcDate'], '%Y-%m-%dT%H:%M:%SZ'))
+
+        # Convertir el diccionario a una lista de jornadas ordenadas
+        sorted_matchdays = sorted(matches_by_matchday.items())
+        ordered_matches = [{"matchday": md, "matches": matches} for md, matches in sorted_matchdays]
+
+        return ordered_matches
+
+    except requests.RequestException as e:
+        print(f'Error al obtener los partidos programados: {e}')
+        return None
+    except Exception as e:
+        print(f'Error: {e}')
+        return None
     
 @api_view(['GET'])
 def make_prediction(request):
@@ -168,6 +214,14 @@ def get_teams_season(request):
 @api_view(['GET'])
 def welcome_view(request):
     return JsonResponse({'message': 'Hola mundo'})
+
+@api_view(['GET'])
+def get_matches_scheduled(request):
+    matches = get_scheduled_matches()
+    if matches:
+        return JsonResponse(matches, safe=False)
+    else:
+        return JsonResponse({'error': 'No se pudieron obtener los partidos programados para la temporada 2024-2025 de la Premier League.'}, status=500)
 
 @api_view(['POST'])
 def retrain_model(request):
