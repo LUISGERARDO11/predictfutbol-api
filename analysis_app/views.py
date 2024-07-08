@@ -1,9 +1,10 @@
 from django.shortcuts import render
 from django.http import JsonResponse, HttpRequest
 from rest_framework.decorators import api_view
-from .predictor import predict
+from .predictor import predict, retrain_model_logic
 from .utils import TEAMS_DATA
 import requests
+import pandas as pd
 
 API_TOKEN = 'cc61b4c3b231421781f1a030f9a1d213'
 base_url = 'https://api.football-data.org/v4'
@@ -45,7 +46,6 @@ def get_external_data(competition_id='PL'):
     except requests.RequestException as e:
         print(f'Error al obtener los detalles del próximo partido: {e}')
         return None
-
 
 def make_prediction_logic():
     if not TEAMS_DATA:
@@ -90,8 +90,6 @@ def get_team_by_shortname(short_name, competition_id='PL'):
     except requests.RequestException as e:
         print(f'Error al buscar el equipo por nombre corto: {e}')
         return None
-
-
 
 def get_teams_next_season(competition_id='PL', season='2024'):
     try:
@@ -170,3 +168,28 @@ def get_teams_season(request):
 @api_view(['GET'])
 def welcome_view(request):
     return JsonResponse({'message': 'Hola mundo'})
+
+@api_view(['POST'])
+def retrain_model(request):
+    required_columns = ['AwayTeam', 'HF', 'AC', 'AR', 'FTAG', 'HST', 'HY', 'FTHG', 'HS', 'AF', 'AY', 'AS', 'AST', 'HomeTeam', 'HC']
+
+    try:
+        # Verificar si el archivo está en los archivos de la solicitud
+        if 'file' not in request.FILES:
+            return JsonResponse({'error': 'No se ha proporcionado ningún archivo.'}, status=400)
+
+        # Leer el archivo CSV
+        file = request.FILES['file']
+        df = pd.read_csv(file)
+
+        # Verificar si todas las columnas requeridas están presentes
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            return JsonResponse({'error': f'Faltan las siguientes columnas requeridas: {", ".join(missing_columns)}'}, status=400)
+
+         # Llamada a la lógica de reentrenamiento
+        result = retrain_model_logic(df)
+
+        return JsonResponse({'message': 'Archivo leído correctamente. ' + result})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
