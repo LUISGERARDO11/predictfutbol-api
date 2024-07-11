@@ -1,14 +1,18 @@
 from .predictor import predict
-from .utils import TEAMS_DATA
+from django.core.cache import cache
 
 def make_prediction_logic():
-    if not TEAMS_DATA:
+    teams_data = cache.get('TEAMS_DATA')
+    if not teams_data:
         raise Exception('No se encontraron datos de equipos.')
     
-    home_team = TEAMS_DATA['homeTeam']
-    away_team = TEAMS_DATA['awayTeam']
+    home_team = teams_data['homeTeam']
+    away_team = teams_data['awayTeam']
     
+    # Prepara los datos de entrada para la predicción
     input_data = {'HomeTeam': home_team, 'AwayTeam': away_team}
+    
+    # Hacer la predicción
     prediction = predict(input_data)
     return prediction
 
