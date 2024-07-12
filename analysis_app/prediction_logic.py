@@ -1,5 +1,4 @@
 from .predictor import predict
-from django.core.cache import cache
 from .utils import fetch_teams_data
 
 def make_prediction_logic():

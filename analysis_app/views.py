@@ -5,7 +5,6 @@ from .predictor import retrain_model_logic
 from .data_fetchers import get_external_data, get_team_by_shortname
 from .prediction_logic import make_prediction_logic, make_prediction_logic_without_teamdata
 import pandas as pd
-from django.core.cache import cache
 import logging
 from .utils import get_teams_next_season, get_scheduled_matches
 

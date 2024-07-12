@@ -1,4 +1,3 @@
-from django.core.cache import cache
 import requests
 import logging
 import time
@@ -19,7 +18,6 @@ def fetch_teams_data(competition_id='PL'):
         logger.error('No se pudo obtener el siguiente partido.')
         return None
     teams = get_teams_from_next_match(next_match)
-    #cache.set('TEAMS_DATA', teams, timeout=60*60*24*7)  # Cache for one week
     logger.info('Datos de equipos obtenidos: %s', teams)
     return teams
 
@@ -123,8 +121,7 @@ def get_scheduled_matches(competition_id='PL', season='2024', max_retries=3, bac
 
             sorted_matchdays = sorted(matches_by_matchday.items())
             ordered_matches = [{"matchday": md, "matches": matches} for md, matches in sorted_matchdays]
-
-            #cache.set('SCHEDULED_MATCHES', ordered_matches, timeout=60*60*24)  # Cache for one day
+            
             return ordered_matches
 
         except requests.RequestException as e:
