@@ -8,6 +8,4 @@ urlpatterns = [
     path('matches_scheduled/', views.get_matches_scheduled, name='get_matches_scheduled'),
     path('predictwithouttd/', views.make_prediction_without_teamdata, name='make_prediction_without_teamdata'),
     path('teams_season/', views.get_teams_season, name='get_teams_season'),
-
-    path('prbprueba/', views.prbget_matches_scheduled, name='prbprueba'),
 ]

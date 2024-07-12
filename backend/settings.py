@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'analysis_app',
     'django_q',
 ]
+
 Q_CLUSTER = {
     'name': 'DjangoQ',
     'workers': 4,

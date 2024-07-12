@@ -1,8 +1,9 @@
 from .predictor import predict
 from django.core.cache import cache
+from .utils import fetch_teams_data
 
 def make_prediction_logic():
-    teams_data = cache.get('TEAMS_DATA')
+    teams_data = fetch_teams_data()
     if not teams_data:
         raise Exception('No se encontraron datos de equipos.')
     

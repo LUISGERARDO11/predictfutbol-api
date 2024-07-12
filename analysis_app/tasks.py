@@ -12,7 +12,7 @@ def schedule_fetch_teams_data():
         minutes=1,  # Esto configura la tarea para ejecutarse cada minuto
         repeats=-1  # Repetir indefinidamente
     )
-
+'''
 def schedule_get_teams_next_season():
     logger.info('Programando la tarea get_teams_next_season para cada minuto.')
     schedule(
@@ -30,3 +30,4 @@ def schedule_get_scheduled_matches():
         minutes=1,  # Esto configura la tarea para ejecutarse cada minuto
         repeats=-1  # Repetir indefinidamente
     )
+'''

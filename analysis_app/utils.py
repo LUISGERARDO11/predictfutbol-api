@@ -17,10 +17,12 @@ def fetch_teams_data(competition_id='PL'):
     next_match = get_next_match(competition_id)
     if next_match is None:
         logger.error('No se pudo obtener el siguiente partido.')
-        return
+        return None
     teams = get_teams_from_next_match(next_match)
-    #cache.set('TEAMS_DATA', teams, timeout=None)
+    #cache.set('TEAMS_DATA', teams, timeout=60*60*24*7)  # Cache for one week
     logger.info('Datos de equipos obtenidos: %s', teams)
+    return teams
+
 
 def get_next_match(competition_id='PL', retry_count=0):
     try:
@@ -51,60 +53,88 @@ def get_teams_from_next_match(match):
         }
     return {}
 
-def get_teams_next_season(competition_id='PL', season='2024'):
-    try:
-        response = requests.get(f'{base_url}/competitions/{competition_id}/teams?season={season}', headers=headers)
-        response.raise_for_status()
-        teams_data = response.json()
+def get_teams_next_season(competition_id='PL', season='2024', max_retries=3, backoff_factor=2):
+    attempt = 0
+    while attempt < max_retries:
+        try:
+            response = requests.get(
+                f'{base_url}/competitions/{competition_id}/teams?season={season}',
+                headers=headers,
+                timeout=10  # Aumentar el tiempo de espera a 10 segundos
+            )
+            response.raise_for_status()
 
-        teams = []
-        if 'teams' in teams_data:
-            for team in teams_data['teams']:
-                teams.append(team['shortName'])
-        else:
-            raise Exception('No se encontraron equipos en la respuesta.')
+            teams_data = response.json()
 
-        teams.sort()
-        cache.set('TEAMS_NEXT_SEASON', teams, timeout=60*60*24*7)  # Cache for one week
-    except requests.RequestException as e:
-        print(f'Error al obtener los equipos de la próxima temporada: {e}')
-        return 
-    except Exception as e:
-        print(f'Error: {e}')
-        return 
+            teams = []
+            if 'teams' in teams_data:
+                for team in teams_data['teams']:
+                    teams.append(team['shortName'])
+            else:
+                raise Exception('No se encontraron equipos en la respuesta.')
 
-def get_scheduled_matches(competition_id='PL', season='2024'):
-    try:
-        response = requests.get(f'{base_url}/competitions/{competition_id}/matches?season={season}', headers=headers)
-        response.raise_for_status()
-        matches_data = response.json()
+            teams.sort()
 
-        matches_by_matchday = {}
-        if 'matches' in matches_data:
-            for match in matches_data['matches']:
-                match_info = {
-                    'utcDate': match['utcDate'],
-                    'homeTeam': match['homeTeam']['shortName'],
-                    'awayTeam': match['awayTeam']['shortName'],
-                    'status': match['status']
-                }
-                matchday = match['matchday']
-                if matchday not in matches_by_matchday:
-                    matches_by_matchday[matchday] = []
-                matches_by_matchday[matchday].append(match_info)
-        else:
-            raise Exception('No se encontraron partidos en la respuesta.')
+            return teams
 
-        for matchday in matches_by_matchday:
-            matches_by_matchday[matchday].sort(key=lambda x: datetime.strptime(x['utcDate'], '%Y-%m-%dT%H:%M:%SZ'))
+        except requests.RequestException as e:
+            attempt += 1
+            print(f'Error al obtener los equipos de la próxima temporada: {e}. Intento {attempt} de {max_retries}.')
+            time.sleep(backoff_factor ** attempt)  # Incrementar el tiempo de espera exponencialmente
 
-        sorted_matchdays = sorted(matches_by_matchday.items())
-        ordered_matches = [{"matchday": md, "matches": matches} for md, matches in sorted_matchdays]
+        except Exception as e:
+            print(f'Error: {e}')
+            return None
 
-        cache.set('SCHEDULED_MATCHES', ordered_matches, timeout=60*60*24)  # Cache for one day
-    except requests.RequestException as e:
-        print(f'Error al obtener los partidos programados: {e}')
-        return 
-    except Exception as e:
-        print(f'Error: {e}')
-        return 
+    print('Se agotaron todos los intentos para obtener los equipos de la próxima temporada.')
+    return None
+
+    
+def get_scheduled_matches(competition_id='PL', season='2024', max_retries=3, backoff_factor=2):
+    attempt = 0
+    while attempt < max_retries:
+        try:
+            response = requests.get(
+                f'{base_url}/competitions/{competition_id}/matches?season={season}',
+                headers=headers,
+                timeout=10  # Aumentar el tiempo de espera a 10 segundos
+            )
+            response.raise_for_status()
+            matches_data = response.json()
+
+            matches_by_matchday = {}
+            if 'matches' in matches_data:
+                for match in matches_data['matches']:
+                    match_info = {
+                        'utcDate': match['utcDate'],
+                        'homeTeam': match['homeTeam']['shortName'],
+                        'awayTeam': match['awayTeam']['shortName'],
+                        'status': match['status']
+                    }
+                    matchday = match['matchday']
+                    if matchday not in matches_by_matchday:
+                        matches_by_matchday[matchday] = []
+                    matches_by_matchday[matchday].append(match_info)
+            else:
+                raise Exception('No se encontraron partidos en la respuesta.')
+
+            for matchday in matches_by_matchday:
+                matches_by_matchday[matchday].sort(key=lambda x: datetime.strptime(x['utcDate'], '%Y-%m-%dT%H:%M:%SZ'))
+
+            sorted_matchdays = sorted(matches_by_matchday.items())
+            ordered_matches = [{"matchday": md, "matches": matches} for md, matches in sorted_matchdays]
+
+            #cache.set('SCHEDULED_MATCHES', ordered_matches, timeout=60*60*24)  # Cache for one day
+            return ordered_matches
+
+        except requests.RequestException as e:
+            attempt += 1
+            print(f'Error al obtener los partidos programados: {e}. Intento {attempt} de {max_retries}.')
+            time.sleep(backoff_factor ** attempt)  # Incrementar el tiempo de espera exponencialmente
+
+        except Exception as e:
+            print(f'Error: {e}')
+            return None
+
+    print('Se agotaron todos los intentos para obtener los partidos programados.')
+    return None

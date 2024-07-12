@@ -7,6 +7,7 @@ from .prediction_logic import make_prediction_logic, make_prediction_logic_witho
 import pandas as pd
 from django.core.cache import cache
 import logging
+from .utils import get_teams_next_season, get_scheduled_matches
 
 logger = logging.getLogger(__name__)
 
@@ -16,11 +17,11 @@ def make_prediction(request):
 
     try:
         prediction = make_prediction_logic()
-        #additional_data = get_external_data()
+        additional_data = get_external_data()
         # Construir el JSON de respuesta
         result = {
             'prediction': prediction,
-            'additional_data': "additional_data",
+            'additional_data': additional_data,
         }
         
         return JsonResponse(result)
@@ -55,25 +56,20 @@ def welcome_view(request):
 
 @api_view(['GET'])
 def get_teams_season(request):
-    teams_next_season = cache.get('TEAMS_NEXT_SEASON')
-    if teams_next_season:
-        response_data = {'teams': teams_next_season}
-        return JsonResponse(response_data)
+    teams = get_teams_next_season()
+    if teams:
+        return JsonResponse({'teams': teams})
     else:
-        return JsonResponse({'error': 'No se encontraron datos de equipos para la próxima temporada en la caché.'}, status=404)
+        return JsonResponse({'error': 'No se pudieron obtener los equipos de la próxima temporada.'}, status=500)
 
 @api_view(['GET'])
 def get_matches_scheduled(request):
-    scheduled_matches = cache.get('SCHEDULED_MATCHES')
-    if scheduled_matches:
-        response_data = {'matches': scheduled_matches}
-        return JsonResponse(response_data)
+    matches = get_scheduled_matches()
+    if matches:
+        return JsonResponse(matches, safe=False)
     else:
-        return JsonResponse({'error': 'No se encontraron partidos programados en la caché.'}, status=404)
+        return JsonResponse({'error': 'No se pudieron obtener los partidos programados para la temporada 2024-2025 de la Premier League.'}, status=500)
 
-@api_view(['GET'])
-def prbget_matches_scheduled(request):
-    return JsonResponse({'message': 'prueba vista nueva'})
     
 @api_view(['POST'])
 def retrain_model(request):

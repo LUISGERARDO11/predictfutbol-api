@@ -6,7 +6,7 @@ base_url = 'https://api.football-data.org/v4'
 headers = {
     'X-Auth-Token': API_TOKEN
 }
-#se queda
+
 def get_external_data(competition_id='PL'):
     try:
         response = requests.get(f'{base_url}/competitions/{competition_id}/matches?status=SCHEDULED', headers=headers)
@@ -38,7 +38,6 @@ def get_external_data(competition_id='PL'):
         print(f'Error al obtener los detalles del próximo partido: {e}')
         return None
 
-#se queda
 def get_team_by_shortname(short_name, competition_id='PL'):
     try:
         response = requests.get(f'{base_url}/competitions/{competition_id}/teams', headers={'X-Auth-Token': API_TOKEN})
