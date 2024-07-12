@@ -51,3 +51,31 @@ def get_teams_from_next_match(match):
             'awayTeam': match['awayTeam']['shortName']
         }
     return {}
+
+def get_teams_next_season(competition_id='PL', season='2024'):
+    try:
+        response = requests.get(f'{base_url}/competitions/{competition_id}/teams?season={season}', headers=headers)
+        response.raise_for_status()
+
+        teams_data = response.json()
+
+        teams = []
+        if 'teams' in teams_data:
+            for team in teams_data['teams']:
+                teams.append(team['shortName'])
+        else:
+            raise Exception('No se encontraron equipos en la respuesta.')
+
+        teams2 = teams.sort()
+
+        # Guardar los datos en caché
+        cache.set('TEAMS_NEXT_SEASON', teams2, timeout=None)  # Cache for one week
+
+        return teams2
+
+    except requests.RequestException as e:
+        print(f'Error al obtener los equipos de la próxima temporada: {e}')
+        return None
+    except Exception as e:
+        print(f'Error: {e}')
+        return None

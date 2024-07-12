@@ -15,6 +15,9 @@ class AnalysisAppConfig(AppConfig):
 
     def schedule_task(self, **kwargs):
         from django_q.models import Schedule
-        from .tasks import schedule_fetch_teams_data
+        from .tasks import schedule_fetch_teams_data, schedule_fetch_teams_next_season
         if not Schedule.objects.filter(func='analysis_app.utils.fetch_teams_data').exists():
             schedule_fetch_teams_data()
+
+        if not Schedule.objects.filter(func='analysis_app.utils.get_teams_next_season').exists():
+            schedule_fetch_teams_next_season()

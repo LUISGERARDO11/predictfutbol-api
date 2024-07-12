@@ -125,3 +125,8 @@ def make_prediction_without_teamdata(request: HttpRequest):
 @api_view(['GET'])
 def welcome_view(request):
     return JsonResponse({'message': 'Hola mundo'})
+
+@api_view(['GET'])
+def get_teams_season(request):
+    teams_next_season = cache.get('TEAMS_NEXT_SEASON')
+    return JsonResponse({'teams': teams_next_season})
