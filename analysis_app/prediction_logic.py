@@ -1,11 +1,17 @@
 from .predictor import predict
 from .utils import fetch_teams_data
+from django.core.cache import cache
 
 def make_prediction_logic():
-    teams_data = fetch_teams_data()
-    if not teams_data:
-        raise Exception('No se encontraron datos de equipos.')
+    cache_key = 'fetch_teams_data_PL'
+    teams_data = cache.get(cache_key)
     
+    if not teams_data:
+        teams_data = fetch_teams_data()
+        if not teams_data:
+            raise Exception('No se encontraron datos de equipos.')
+        cache.set(cache_key, teams_data, timeout=60*60*24)  # Cache por 24 horas
+
     home_team = teams_data['homeTeam']
     away_team = teams_data['awayTeam']
     

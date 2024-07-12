@@ -7,6 +7,7 @@ from .prediction_logic import make_prediction_logic, make_prediction_logic_witho
 import pandas as pd
 import logging
 from .utils import get_teams_next_season, get_scheduled_matches
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -55,20 +56,19 @@ def welcome_view(request):
 
 @api_view(['GET'])
 def get_teams_season(request):
-    teams = get_teams_next_season()
-    if teams:
-        return JsonResponse({'teams': teams})
-    else:
-        return JsonResponse({'error': 'No se pudieron obtener los equipos de la próxima temporada.'}, status=500)
+    data = cache.get('get_teams_next_season_PL_2024')
+    if not data:
+        data = get_teams_next_season()
+        cache.set('get_teams_next_season_PL_2024', data, timeout=60*60*24)
+    return JsonResponse({'teams': data})
 
 @api_view(['GET'])
 def get_matches_scheduled(request):
-    matches = get_scheduled_matches()
-    if matches:
-        return JsonResponse(matches, safe=False)
-    else:
-        return JsonResponse({'error': 'No se pudieron obtener los partidos programados para la temporada 2024-2025 de la Premier League.'}, status=500)
-
+    data = cache.get('get_scheduled_matches_PL_2024')
+    if not data:
+        data = get_scheduled_matches()
+        cache.set('get_scheduled_matches_PL_2024', data, timeout=60*60*24)
+    return JsonResponse(data, safe=False)
     
 @api_view(['POST'])
 def retrain_model(request):
